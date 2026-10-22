@@ -34,12 +34,12 @@
   function show(view){if(view==='administrators'&&!canManageAdmins())return;state.view=view;document.querySelectorAll('.view').forEach(el=>el.classList.toggle('hidden',el.id!==view));document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));$('breadcrumb-current').textContent=({dashboard:'Resumen general',athletes:'Atletas',detail:'Perfil del atleta',compare:'Comparar resultados',administrators:'Administradores'})[view];clearNotice();window.scrollTo(0,0);}
   function logout(message=''){state.token=null;state.user=null;state.serial++;$('app-view').classList.add('hidden');$('login-view').classList.remove('hidden');$('password').value='';$('login-error').textContent=message;$('login-error').classList.toggle('hidden',!message);}
   async function login(event){event.preventDefault();const button=$('login-button');button.disabled=true;$('login-error').classList.add('hidden');try{
-      const payload=await request('/api/auth/login',{ method:'POST',body:JSON.stringify({email:$('email').value.trim(),password:$('password').value}) });
-      if(payload.user?.role!=='admin' || !payload.user.permissions?.includes('results:all:read') || !payload.token) throw new ApiError(403,'Solo las cuentas administradoras pueden acceder a este panel.');
+      const payload=await request('/api/auth/login',{ method:'POST',body:JSON.stringify({username:$('username').value.trim(),password:$('password').value}) });
+      if(!['admin','superadmin'].includes(payload.user?.role) || !payload.user.permissions?.includes('results:all:read') || !payload.token) throw new ApiError(403,'Solo las cuentas administradoras pueden acceder a este panel.');
       state.token=payload.token;
       const verified=await request('/api/auth/me');const user=verified.user||verified;
-      if(user.role!=='admin' || !user.permissions?.includes('results:all:read')) throw new ApiError(403,'La cuenta no tiene permisos administrativos activos.');
-      state.user=user;$('side-user').textContent=user.nombre||user.email;$('user-initials').textContent=(user.nombre||'AD').split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase();$('admin-nav').classList.toggle('hidden',!canManageAdmins());$('mobile-admin-nav').classList.toggle('hidden',!canManageAdmins());$('login-view').classList.add('hidden');$('app-view').classList.remove('hidden');$('password').value='';show('dashboard');await Promise.all([loadFilters(),loadAthletes()]);await loadDashboard();
+      if(!['admin','superadmin'].includes(user.role) || !user.permissions?.includes('results:all:read')) throw new ApiError(403,'La cuenta no tiene permisos administrativos activos.');
+      state.user=user;$('side-user').textContent=user.nombre||user.username;$('user-initials').textContent=(user.nombre||'AD').split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase();$('admin-nav').classList.toggle('hidden',!canManageAdmins());$('mobile-admin-nav').classList.toggle('hidden',!canManageAdmins());$('login-view').classList.add('hidden');$('app-view').classList.remove('hidden');$('password').value='';show('dashboard');await Promise.all([loadFilters(),loadAthletes()]);await loadDashboard();
     }catch(err){state.token=null;$('login-error').textContent=err.message;$('login-error').classList.remove('hidden');}finally{button.disabled=false;}}
   function filters(){return { federacion:$('federation').value,exerciseType:$('exercise').value,from:$('date-from').value,to:$('date-to').value};}
   async function loadFilters(){try{const data=await request('/api/admin/federaciones');const entries=Array.isArray(data.federaciones)?data.federaciones:[];for(const id of ['federation','athlete-federation']){const sel=$(id),old=sel.value;sel.querySelectorAll('option:not(:first-child)').forEach(o=>o.remove());entries.forEach(f=>{const opt=document.createElement('option');opt.value=f.nombre;opt.textContent=`${f.nombre} (${f.totalAtletas})`;sel.append(opt)});sel.value=old;}}catch(e){notice(e.message,'error');}}
@@ -77,7 +77,7 @@
       $('admins-body').innerHTML=(data.administradores||[]).map(a=>{
         const privileged=a.role==='superadmin',self=a.id===state.user.id;
         const change=privileged||self?'—':`<button class="link-button" data-admin-state="${a.id}" data-active="${!a.isActive}">${a.isActive?'Desactivar':'Reactivar'}</button>`;
-        return `<tr><td><strong>${txt(a.nombre)}</strong><div style="font-size:10px;color:#a1adba">${txt(a.email)}</div></td><td>${privileged?'Superadministrador':'Administrador'}</td><td><span class="status-chip ${a.isActive?'':'off'}">${a.isActive?'Activo':'Inactivo'}</span></td><td>${change}</td></tr>`;
+        return `<tr><td><strong>${txt(a.nombre)}</strong><div style="font-size:10px;color:#a1adba">@${txt(a.username)}</div></td><td>${privileged?'Superadministrador':'Administrador'}</td><td><span class="status-chip ${a.isActive?'':'off'}">${a.isActive?'Activo':'Inactivo'}</span></td><td>${change}</td></tr>`;
       }).join('')||'<tr><td colspan="4" class="empty">No hay administradores.</td></tr>';
       $('admins-total').textContent=`${state.adminTotal} cuentas · página ${state.adminPage+1}`;
       $('admins-prev').disabled=state.adminPage===0;$('admins-next').disabled=(state.adminPage+1)*25>=state.adminTotal;
@@ -91,7 +91,7 @@
   async function createAdministrator(event){event.preventDefault();if(!canManageAdmins())return;
     const button=$('admin-create-button');button.disabled=true;
     try{
-      const payload={nombre:$('new-admin-name').value.trim(),email:$('new-admin-email').value.trim(),password:$('new-admin-password').value};
+      const payload={nombre:$('new-admin-name').value.trim(),username:$('new-admin-username').value.trim(),password:$('new-admin-password').value};
       await request('/api/admin/administradores',{method:'POST',body:JSON.stringify(payload)});
       $('admin-create').reset();await Promise.all([loadAdministrators(),loadAudit()]);notice('Administrador creado correctamente. Comparte su contraseña inicial mediante un canal seguro.');
     }catch(e){notice(e.message,'error');}finally{button.disabled=false;}

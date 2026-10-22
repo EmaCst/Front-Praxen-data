@@ -6,7 +6,7 @@ Frontend estático del sistema de prevención de lesiones mediante entrenamiento
 
 - Frontend: HTML, CSS y JavaScript nativo, sin dependencias ni compilación.
 - API: `https://api-praxen.onrender.com` ([API-Praxen](https://github.com/EmaCst/API-Praxen)).
-- Autenticación: `POST /api/auth/login` + validación del rol con `GET /api/auth/me`.
+- Autenticación exclusivamente mediante `username` y `password` en `POST /api/auth/login`, con validación del rol mediante `GET /api/auth/me`.
 - Gestión de cuentas (solo `superadmin`): listado, creación de administradores, activación/desactivación y auditoría mediante `/api/admin/administradores`.
 - Datos: rutas protegidas `/api/admin/atletas`, `/api/admin/federaciones`, `/api/admin/resultados/*`.
 
@@ -30,9 +30,9 @@ CORS_ORIGINS=https://praxen.pages.dev
 
 Si se usa un dominio personalizado, incluir también su origen. Tras cambiar la variable, comprobar que las solicitudes `OPTIONS` y `POST` desde el navegador funcionan. No habilitar CORS universal para datos administrativos.
 
-La cuenta `admin` se aprovisiona desde una terminal confiable del backend, como se explica en `API-Praxen/docs/admin-results-api.md`. El registro público no crea administradores.
+La primera cuenta `superadmin` se crea de forma controlada en Neon con usuario y hash bcrypt, como se explica en `API-Praxen/docs/admin-results-api.md`. El registro público no crea administradores.
 
-El bootstrap crea ahora un `superadmin`, único rol que puede acceder a **Administradores**. Desde el panel solo se crean cuentas `admin`; no se pueden promover superadministradores. El estado de las cuentas se verifica en cada solicitud a la API.
+Solo `superadmin` puede acceder a **Administradores**. Desde el panel se crean cuentas `admin` con nombre, usuario y contraseña; no se pueden promover superadministradores. El estado de las cuentas se verifica en cada solicitud a la API.
 
 ## Seguridad y límites
 
